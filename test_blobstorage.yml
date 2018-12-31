@@ -11,7 +11,7 @@ resources:
     storage_account_name: {{azure_storage_account_name}}
     storage_account_key: {{azure_storage_account_key}}
     container: {{azure_storage_container}}
-    versioned_file: platform-automation-tasks-1.0.1-beta.1.zip
+    versioned_file: {{platform_automation_tasks_zip}}
 
 - name: platform-automation-image-azure
   type: azure-blobstore
@@ -19,7 +19,7 @@ resources:
     storage_account_name: {{azure_storage_account_name}}
     storage_account_key: {{azure_storage_account_key}}
     container: {{azure_storage_container}}
-    versioned_file: platform-automation-image-1.0.1-beta.1.tgz
+    versioned_file: {{platform_automation_image_tarball}}
     
 jobs:
 - name: test-resources
