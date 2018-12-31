@@ -1,5 +1,5 @@
 azure_storage_account_name: [[STORAGE_ACCOUNT_NAME]]
-azure_storage_account_key: [[ACESSS_KEY]]
+azure_storage_account_key: [[ACCESS_KEY]]
 azure_storage_container: pcfautomation
 
 platform_automation_tasks_zip: platform-automation-tasks-1.0.1-beta.1.zip
