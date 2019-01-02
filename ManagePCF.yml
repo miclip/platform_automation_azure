@@ -22,7 +22,6 @@ resources:
     private_key: ((git_private_key))
     uri: ((configuration_uri))
     branch: master
-    paths: [download-product-configs/*]
 
 - name: healthwatch-product
   type: azure-blobstore
@@ -40,12 +39,12 @@ resources:
     container: {{azure_pivnet_products_storage_container}}
     versioned_file: bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
 
-- name: opsman-product
-  type: azure-blobstore
-  source:
-    storage_account_name: opsmanagerwestus
-    container: images
-    versioned_file: ops-manager-2.4-build.131.vhd
+# - name: opsman-product
+#   type: azure-blobstore
+#   source:
+#     storage_account_name: opsmanagerwestus
+#     container: images
+#     versioned_file: ops-manager-2.4-build.131.vhd
   
 - name: pas-product
   type: azure-blobstore
@@ -89,24 +88,26 @@ resources:
 
 jobs:
 - name: fetch-healthwatch
-  plan:
+  plan: 
   - aggregate:
-    - get: daily
-      trigger: true   
-    - get: platform-automation-tasks-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-image/task.yml
-      task: unpack-zip
-    - get: platform-automation-image-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-tarball
-    - get: config
+    - do:     
+      - get: daily
+        trigger: true   
+      - get: config 
+      - get: platform-automation-tasks-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip
+      - get: platform-automation-image-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+    
   - task: download-healthwatch-product-and-stemcell
     image: platform-automation-image
     file: platform-automation-tasks/tasks/download-product.yml
     params:
-      CONFIG_FILE: download-product-configs/healthwatch.yml
+      CONFIG_FILE: config/download-product-configs/healthwatch.yml
     output_mapping: {downloaded-stemcell: healthwatch-stemcell}
   - aggregate:
     - put: healthwatch-product
@@ -117,24 +118,25 @@ jobs:
         file: healthwatch-stemcell/bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
 
 - name: fetch-pas
-  plan:
+  plan:  
   - aggregate:
-    - get: daily
-      trigger: true
-    - get: platform-automation-tasks-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-image/task.yml
-      task: unpack-zip
-    - get: platform-automation-image-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-tarball
-    - get: config
+    - do:      
+      - get: daily
+        trigger: true
+      - get: config
+      - get: platform-automation-tasks-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip
+      - get: platform-automation-image-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
   - task: download-pas-product-and-stemcell
     image: platform-automation-image
     file: platform-automation-tasks/tasks/download-product.yml
     params:
-      CONFIG_FILE: download-product-configs/pas.yml
+      CONFIG_FILE: config/download-product-configs/pas.yml
     output_mapping: {downloaded-stemcell: pas-stemcell}
   - aggregate:
     - put: pas-product
