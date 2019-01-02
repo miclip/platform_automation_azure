@@ -1,0 +1,159 @@
+resource_types:
+- name: pivnet
+  type: docker-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tags: latest-final
+
+- name: azure-blobstore
+  type: docker-image
+  source:
+    repository: pcfabr/azure-blobstore-resource
+
+resources:
+- name: daily
+  type: time
+  source:
+    interval: 24h
+
+- name: config
+  type: git
+  source:
+    private_key: ((git_private_key))
+    uri: ((configuration_uri))
+    branch: master
+    paths: [download-product-configs/*]
+
+- name: healthwatch-product
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: p-healthwatch-1.4.4-build.1.pivotal
+
+- name: healthwatch-stemcell
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: opsman-product
+  type: azure-blobstore
+  source:
+    storage_account_name: opsmanagerwestus
+    container: images
+    versioned_file: ops-manager-2.4-build.131.vhd
+  
+- name: pas-product
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: cf-2.4.1-build.1.pivotal
+
+- name: pas-stemcell
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: platform-automation-pivnet
+  type: pivnet
+  source:
+    api_token: {{pivnet_token}}
+    product_slug: platform-automation
+    product_version: 1\.(.*) # pin to major version 1
+    sort_by: semver
+
+- name: platform-automation-tasks-azure
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pcfauto_storage_container}}
+    versioned_file: {{platform_automation_tasks_zip}}
+
+- name: platform-automation-image-azure
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pcfauto_storage_container}}
+    versioned_file: {{platform_automation_image_tarball}}
+
+jobs:
+- name: fetch-healthwatch
+  plan:
+  - aggregate:
+    - get: daily
+      trigger: true   
+    - get: platform-automation-tasks-azure
+      passed: [fetch-platform-automation]
+    - file: config/tasks/unzip-platform-automation-image/task.yml
+      task: unpack-zip
+    - get: platform-automation-image-azure
+      passed: [fetch-platform-automation]
+    - file: config/tasks/unzip-platform-automation-tasks/task.yml
+      task: unpack-tarball
+    - get: config
+  - task: download-healthwatch-product-and-stemcell
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/download-product.yml
+    params:
+      CONFIG_FILE: download-product-configs/healthwatch.yml
+    output_mapping: {downloaded-stemcell: healthwatch-stemcell}
+  - aggregate:
+    - put: healthwatch-product
+      params:
+        file: downloaded-product/p-healthwatch-1.4.4-build.1.pivotal
+    - put: healthwatch-stemcell
+      params:
+        file: healthwatch-stemcell/bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: fetch-pas
+  plan:
+  - aggregate:
+    - get: daily
+      trigger: true
+    - get: platform-automation-tasks-azure
+      passed: [fetch-platform-automation]
+    - file: config/tasks/unzip-platform-automation-image/task.yml
+      task: unpack-zip
+    - get: platform-automation-image-azure
+      passed: [fetch-platform-automation]
+    - file: config/tasks/unzip-platform-automation-tasks/task.yml
+      task: unpack-tarball
+    - get: config
+  - task: download-pas-product-and-stemcell
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/download-product.yml
+    params:
+      CONFIG_FILE: download-product-configs/pas.yml
+    output_mapping: {downloaded-stemcell: pas-stemcell}
+  - aggregate:
+    - put: pas-product
+      params:
+        file: downloaded-product/cf-2.4.1-build.1.pivotal
+    - put: pas-stemcell
+      params:
+        file: pas-stemcell/bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: fetch-platform-automation
+  # We use the pivnet resource to bootstrap the pipeline,
+  # and because this product is part of the pipeline, not the foundation
+  plan:
+  - get: platform-automation-pivnet
+    trigger: true
+  - aggregate:
+    - put: platform-automation-tasks-azure
+      params:
+        file: platform-automation-pivnet/platform-automation-tasks-1.0.1-beta.1.zip
+    - put: platform-automation-image-azure
+      params:
+        file: platform-automation-pivnet/platform-automation-image-1.0.1-beta.1.tgz

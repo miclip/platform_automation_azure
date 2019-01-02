@@ -10,7 +10,7 @@ resources:
   source:
     storage_account_name: {{azure_storage_account_name}}
     storage_account_key: {{azure_storage_account_key}}
-    container: {{azure_storage_container}}
+    container: {{azure_pcfauto_storage_container}}
     versioned_file: {{platform_automation_tasks_zip}}
 
 - name: platform-automation-image-azure
@@ -18,7 +18,7 @@ resources:
   source:
     storage_account_name: {{azure_storage_account_name}}
     storage_account_key: {{azure_storage_account_key}}
-    container: {{azure_storage_container}}
+    container: {{azure_pcfauto_storage_container}}
     versioned_file: {{platform_automation_image_tarball}}
     
 jobs:

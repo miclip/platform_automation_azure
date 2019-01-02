@@ -1,0 +1,16 @@
+---
+image_resource:
+  source:
+    repository: pcfnorm/rootfs
+    tag: 1.0.28
+  type: docker-image
+inputs:
+- name: platform-automation-image-azure
+outputs:
+- name: platform-automation-image
+platform: linux
+run:
+  args:
+  - -c
+  - tar -xvf platform-automation-image-azure/*.tgz -C ./platform-automation-image
+  path: bash
