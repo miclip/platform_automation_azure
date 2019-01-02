@@ -138,7 +138,8 @@ jobs:
     file: platform-automation-tasks/tasks/download-product.yml
     params:
       CONFIG_FILE: download-product-configs/pas.yml
-      PIVNET_API_TOKEN: {{pivnet_token}}
+      VARS_FILE_ARGS: 
+        - pivnet-api-token: {{pivnet_token}}
     output_mapping: {downloaded-stemcell: pas-stemcell}
   - aggregate:
     - put: pas-product
