@@ -10,6 +10,11 @@ resource_types:
   source:
     repository: pcfabr/azure-blobstore-resource
 
+- name: file-downloader
+  type: docker-image
+  source:
+    repository: pivotalservices/file-downloader-resource
+
 resources:
 - name: daily
   type: time
@@ -63,11 +68,11 @@ resources:
 - name: opsman-image
   type: azure-blobstore
   source:
-    storage_account_name: opsmanagerwestus
-    storage_account_key: none
-    container: images
-    versioned_file: ops-manager-2.4-build.131.vhd
-  
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: OpsManager2.4-build.131onAzure.yml
+ 
 - name: pas-product
   type: azure-blobstore
   source:
@@ -83,14 +88,6 @@ resources:
     storage_account_key: {{azure_storage_account_key}}
     container: {{azure_pivnet_products_storage_container}}
     versioned_file: bosh-stemcell-170.15-azure-hyperv-ubuntu-xenial-go_agent.tgz
-
-- name: platform-automation-pivnet
-  type: pivnet
-  source:
-    api_token: {{pivnet_token}}
-    product_slug: platform-automation
-    product_version: 1\.(.*) # pin to major version 1
-    sort_by: semver
 
 - name: platform-automation-tasks-azure
   type: azure-blobstore
@@ -109,102 +106,26 @@ resources:
     versioned_file: {{platform_automation_image_tarball}}
 
 jobs:
-- name: fetch-healthwatch
-  plan: 
-  - aggregate:
-    - do:     
-      - get: daily
-        trigger: true   
-      - get: config 
-      - get: vars
-      - get: platform-automation-tasks-azure
-        passed: [fetch-platform-automation]
-      - file: config/tasks/unzip-platform-automation-tasks/task.yml
-        task: unpack-zip
-      - get: platform-automation-image-azure
-        passed: [fetch-platform-automation]
-      - file: config/tasks/tar-platform-automation-image/task.yml
-        task: unpack-tarball
-    
-  - task: download-healthwatch-product-and-stemcell
-    image: platform-automation-image
-    file: platform-automation-tasks/tasks/download-product.yml
-    params:
-      CONFIG_FILE: download-product-configs/healthwatch.yml
-      VARS_FILES: vars/vars.yml
-    output_mapping: {downloaded-stemcell: healthwatch-stemcell}
-  - aggregate:
-    - put: healthwatch-product
-      params:
-        file: downloaded-product/p-healthwatch-1.4.4-build.1.pivotal
-    - put: healthwatch-stemcell
-      params:
-        file: healthwatch-stemcell/bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
-
-- name: fetch-pas
-  plan:  
-  - aggregate:
-    - do:      
-      - get: daily
-        trigger: true
-      - get: config
-      - get: vars
-      - get: platform-automation-tasks-azure
-        passed: [fetch-platform-automation]
-      - file: config/tasks/unzip-platform-automation-tasks/task.yml
-        task: unpack-zip
-      - get: platform-automation-image-azure
-        passed: [fetch-platform-automation]
-      - file: config/tasks/tar-platform-automation-image/task.yml
-        task: unpack-tarball
-  - task: download-pas-product-and-stemcell
-    image: platform-automation-image
-    file: platform-automation-tasks/tasks/download-product.yml
-    params:
-      CONFIG_FILE: download-product-configs/pas.yml
-      VARS_FILES: vars/vars.yml
-    output_mapping: {downloaded-stemcell: pas-stemcell}
-  - aggregate:
-    - put: pas-product
-      params:
-        file: downloaded-product/cf-2.4.1-build.1.pivotal
-    - put: pas-stemcell
-      params:
-        file: pas-stemcell/bosh-stemcell-170.15-azure-hyperv-ubuntu-xenial-go_agent.tgz
-
-- name: fetch-platform-automation
-  # We use the pivnet resource to bootstrap the pipeline,
-  # and because this product is part of the pipeline, not the foundation
-  plan:
-  - get: platform-automation-pivnet
-    trigger: true
-  - aggregate:
-    - put: platform-automation-tasks-azure
-      params:
-        file: platform-automation-pivnet/platform-automation-tasks-1.0.1-beta.1.zip
-    - put: platform-automation-image-azure
-      params:
-        file: platform-automation-pivnet/platform-automation-image-1.0.1-beta.1.tgz
-
 - name: install-opsman
   serial: true
   serial_groups: [ install ]
   plan:
   - aggregate:
-    - get: platform-automation-image-azure
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball
-    - get: one-time-trigger
-      trigger: true  
-    - get: platform-automation-tasks-azure
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip    
-    - get: opsman-image
-    - get: config
-    - get: vars
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-image-azure
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball        
+      - get: one-time-trigger
+        trigger: true  
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip    
+      - get: opsman-image    
   - task: create-vm
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/create-vm.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/create-vm.yml
     input_mapping:
       image: opsman-image
       state: config
@@ -215,8 +136,8 @@ jobs:
     ensure: &make-state-commit
       do:
         - task: make-commit
-          image: pcf-automation-image
-          file: pcf-automation-tasks/tasks/make-git-commit.yml
+          image: platform-automation-image
+          file: platform-automation-tasks/tasks/make-git-commit.yml
           input_mapping:
             repository: config
             file-source: generated-state
@@ -233,31 +154,31 @@ jobs:
             repository: config-commit
             merge: true
   - task: configure-authentication
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/configure-authentication.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-authentication.yml
     attempts: 10
     input_mapping:
-      env: config
-      config: config
+      env: vars
+      config: vars
     params:
       ENV_FILE: ((foundation))/env/env.yml
-      AUTH_CONFIG_FILE: ((foundation))/config/auth.yml
+      AUTH_CONFIG_FILE: ((foundation))/auth/auth.yml
   - task: configure-director
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/configure-director.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-director.yml
     input_mapping:
       config: config
-      env: config
+      env: vars
       vars: vars
     params:
       VARS_FILES: vars/((foundation))/vars/director-vars.yml
       ENV_FILE: ((foundation))/env/env.yml
       DIRECTOR_CONFIG_FILE: ((foundation))/config/director.yml
   - task: apply-director-changes
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/apply-director-changes.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-director-changes.yml
     input_mapping:
-      env: config
+      env: vars
     params:
       ENV_FILE: ((foundation))/env/env.yml
 
@@ -265,20 +186,20 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - get: platform-automation-tasks-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip
-    - get: platform-automation-image-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball
-    - get: config
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip
+      - get: platform-automation-image-azure
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball   
   - task: staged-director-config
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/staged-director-config.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/staged-director-config.yml
     input_mapping:
-      env: config
+      env: vars
     params:
       ENV_FILE: ((foundation))/env/env.yml
 
@@ -289,18 +210,16 @@ jobs:
     - get: daily
       trigger: true
     - get: platform-automation-tasks-azure
-      passed: [fetch-platform-automation]
     - file: config/tasks/unzip-platform-automation-tasks/task.yml
       task: unpack-zip
     - get: platform-automation-image-azure
-      passed: [fetch-platform-automation]
     - file: config/tasks/tar-platform-automation-image/task.yml
       task: unpack-tarball
     - get: config
     - get: vars
   - task: export-installation
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/export-installation.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/export-installation.yml
     input_mapping:
       env: config
     params:
@@ -314,24 +233,23 @@ jobs:
   serial_groups: [ install ]
   plan:
   - aggregate:
-    - get: one-time-trigger
-      passed: [ install-opsman ]
-    - get: platform-automation-tasks-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip
-    - get: platform-automation-image-azure
-      passed: [fetch-platform-automation]
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball
-    - get: opsman-image
-    - get: installation
-      passed: [ export-installation ]
-    - get: config
-    - get: vars
+    - do: 
+      - get: config
+      - get: vars
+      - get: one-time-trigger
+        passed: [ install-opsman ]
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip
+      - get: platform-automation-image-azure
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+      - get: opsman-image
+      - get: installation
+        passed: [ export-installation ]    
   - task: upgrade-opsman
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/upgrade-opsman.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upgrade-opsman.yml
     input_mapping:
       image: opsman-image
       state: config
@@ -345,8 +263,8 @@ jobs:
       STATE_FILE: ((foundation))/state/state.yml
     ensure: *make-state-commit
   - task: apply-director-changes
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/apply-director-changes.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-director-changes.yml
     input_mapping:
       env: config
     params:
@@ -368,16 +286,16 @@ jobs:
     - get: config
     - get: vars
   - task: upload-product
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/upload-product.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-product.yml
     input_mapping:
       product: pas-product
       env: config
     params:
       ENV_FILE: ((foundation))/env/env.yml
   - task: stage-product
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/stage-product.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/stage-product.yml
     input_mapping:
       product: pas-product
       env: config
@@ -388,20 +306,21 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - get: platform-automation-image-azure
-      passed:
-      - upload-and-stage-pas
-      trigger: true
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball
-    - get: platform-automation-tasks-azure
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip    
-    - get: config
-    - get: vars
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-image-azure
+        passed:
+        - upload-and-stage-pas
+        trigger: true
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip    
   - task: configure-pas
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/configure-product.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-product.yml
     input_mapping:
       config: config
       env: config
@@ -431,16 +350,16 @@ jobs:
     - get: config
     - get: vars
   - task: upload-pas-stemcell
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/upload-stemcell.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-stemcell.yml
     input_mapping:
       env: config
       stemcell: pas-stemcell
     params:
       ENV_FILE: ((foundation))/env/env.yml
   - task: upload-healthwatch-stemcell
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/upload-stemcell.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-stemcell.yml
     input_mapping:
       env: config
       stemcell: healthwatch-stemcell
@@ -451,21 +370,22 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - get: platform-automation-image-azure
-      passed:
-      - upload-stemcell
-      trigger: true
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball  
-    - get: platform-automation-tasks-azure
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip    
-    - get: healthwatch-product
-    - get: config
-    - get: vars
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-image-azure
+        passed:
+        - upload-stemcell
+        trigger: true
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball  
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip    
+      - get: healthwatch-product
   - task: upload-and-stage-product
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/upload-and-stage-product.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-and-stage-product.yml
     input_mapping:
       product: healthwatch-product
       env: config
@@ -488,8 +408,8 @@ jobs:
     - get: config
     - get: vars
   - task: configure-healthwatch
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/configure-product.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-product.yml
     input_mapping:
       config: config
       env: config
@@ -515,8 +435,8 @@ jobs:
     - get: config
     - get: vars
   - task: apply-product-changes
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/apply-changes.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/apply-changes.yml
     input_mapping:
       env: config
     params:
@@ -534,8 +454,8 @@ jobs:
     - get: config
     - get: vars
   - task: staged-config
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/staged-config.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/staged-config.yml
     input_mapping:
       env: config
     params:
@@ -554,8 +474,8 @@ jobs:
     - get: config
     - get: vars
   - task: staged-config
-    image: pcf-automation-image
-    file: pcf-automation-tasks/tasks/staged-config.yml
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/staged-config.yml
     input_mapping:
       env: config
     params:
