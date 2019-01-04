@@ -39,7 +39,7 @@ networks-configuration:
       cidr: ((azure_terraform_subnet_infra_cidr))
       reserved_ip_ranges: ((azure_terraform_subnet_infra_reserved))
       dns: ((azure_terraform_subnet_infra_dns)),
-      gateway": ((azure_terraform_subnet_infra_gateway))
+      gateway: ((azure_terraform_subnet_infra_gateway))
   - network: 
     name: ert
     service_network: false
@@ -48,7 +48,7 @@ networks-configuration:
       cidr: ((azure_terraform_subnet_ert_cidr))
       reserved_ip_ranges: ((azure_terraform_subnet_ert_reserved))
       dns: ((azure_terraform_subnet_ert_dns)),
-      gateway": ((azure_terraform_subnet_ert_gateway))
+      gateway: ((azure_terraform_subnet_ert_gateway))
   - network: 
     name: services-1
     service_network: false
@@ -57,7 +57,7 @@ networks-configuration:
       cidr: ((azure_terraform_subnet_services1_cidr))
       reserved_ip_ranges: ((azure_terraform_subnet_services1_reserved))
       dns: ((azure_terraform_subnet_services1_dns)),
-      gateway": ((azure_terraform_subnet_services1_gateway))
+      gateway: ((azure_terraform_subnet_services1_gateway))
   - network: 
     name: dynamic-services
     service_network: true
@@ -66,7 +66,7 @@ networks-configuration:
       cidr: ((azure_terraform_subnet_dynamic_services_cidr))
       reserved_ip_ranges: ((azure_terraform_subnet_dynamic_services_reserved))
       dns: ((azure_terraform_subnet_dynamic_services_dns)),
-      gateway": ((azure_terraform_subnet_dynamic_services_gateway))
+      gateway: ((azure_terraform_subnet_dynamic_services_gateway))
 resource-configuration:
   compilation:
     instance_type:
