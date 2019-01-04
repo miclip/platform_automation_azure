@@ -12,5 +12,5 @@ platform: linux
 run:
   args:
   - -c
-  - tar -xvf platform-automation-image-azure/*.tgz -C ./platform-automation-image
+  - tar -xf platform-automation-image-azure/*.tgz -C ./platform-automation-image
   path: bash
