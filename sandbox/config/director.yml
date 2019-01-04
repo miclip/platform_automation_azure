@@ -75,8 +75,5 @@ resource-configuration:
 security-configuration:
   trusted_certificates: ((trusted_certificates))
   generate_vm_passwords: true
-vmextensions-configuration:
-  some_vm_extension:
-    cloud_properties:
-      source_dest_check: false
+
     
