@@ -182,26 +182,7 @@ jobs:
     params:
       ENV_FILE: ((foundation))/env/env.yml
 
-- name: staged-director-config
-  serial: true
-  plan:
-  - aggregate:
-    - do: 
-      - get: config
-      - get: vars
-      - get: platform-automation-tasks-azure
-      - file: config/tasks/unzip-platform-automation-tasks/task.yml
-        task: unpack-zip
-      - get: platform-automation-image-azure
-      - file: config/tasks/tar-platform-automation-image/task.yml
-        task: unpack-tarball   
-  - task: staged-director-config
-    image: platform-automation-image
-    file: platform-automation-tasks/tasks/staged-director-config.yml
-    input_mapping:
-      env: vars
-    params:
-      ENV_FILE: ((foundation))/env/env.yml
+
 
 - name: export-installation
   serial: true
