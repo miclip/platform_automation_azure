@@ -69,8 +69,14 @@ networks-configuration:
       gateway: ((azure_terraform_subnet_dynamic_services_gateway))
 resource-configuration:
   compilation:
+    instances: automatic
     instance_type:
-      id: m4.xlarge
+      id: automatic
 security-configuration:
   trusted_certificates: ((trusted_certificates))
   generate_vm_passwords: true
+vmextensions-configuration:
+  some_vm_extension:
+    cloud_properties:
+      source_dest_check: false
+    
