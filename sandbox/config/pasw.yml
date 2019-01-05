@@ -3,13 +3,13 @@ product-properties:
   .properties.bosh_ssh_enabled:
     value: false
   .properties.kms:
-    value: disabled
+    value: disable
   .properties.kms.enable.port:
     value: 1688
   .properties.rdp_enabled:
     value: false
   .properties.system_logging:
-    value: disabled
+    value: disable
   .properties.system_logging.enable.syslog_protocol:
     value: udp
   .properties.windows_admin_password:

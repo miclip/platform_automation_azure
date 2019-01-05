@@ -91,7 +91,7 @@ resources:
     storage_account_name: {{azure_storage_account_name}}
     storage_account_key: {{azure_storage_account_key}}
     container: {{azure_pivnet_products_storage_container}}
-    versioned_file: bosh-stemcell-170.15-azure-hyperv-ubuntu-xenial-go_agent.tgz
+    versioned_file: light-bosh-stemcell-1803.5-azure-hyperv-windows1803-go_agent.tgz
 
 - name: platform-automation-pivnet
   type: pivnet
