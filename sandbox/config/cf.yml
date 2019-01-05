@@ -103,11 +103,13 @@ product-properties:
     - name: ((credhub_encryption_key_name1))
       primary: true
       provider: internal
-      secret: ((credhub_encryption_key_secret1))
+      key:
+        secret: ((credhub_encryption_key_secret1))
     - name: ((credhub_encryption_key_name2))
       primary: false
       provider: internal
-      secret: ((credhub_encryption_key_secret2))
+      key:
+        secret: ((credhub_encryption_key_secret2))
   .properties.diego_database_max_open_connections:
     value: 100
   .properties.diego_log_timestamp_format:
