@@ -409,18 +409,19 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - get: platform-automation-image-azure
-      passed:
-      - configure-healthwatch
-      - configure-pas
-      trigger: true
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball  
-    - get: platform-automation-tasks-azure
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip
-    - get: config
-    - get: vars
+    - do: 
+      - get: config
+      - get: platform-automation-image-azure
+        passed:
+        - configure-healthwatch
+        - configure-pas
+        trigger: true
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball  
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip   
+      - get: vars
   - task: apply-product-changes
     image: platform-automation-image
     file: platform-automation-tasks/tasks/apply-changes.yml

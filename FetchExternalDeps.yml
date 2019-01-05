@@ -69,7 +69,23 @@ resources:
     container: {{azure_pivnet_products_storage_container}}
     versioned_file: cf-2.4.1-build.1.pivotal
 
+- name: pasw-product
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: pas-windows-2.4.1-build.1.pivotal
+
 - name: pas-stemcell
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: bosh-stemcell-170.15-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: pasw-stemcell
   type: azure-blobstore
   source:
     storage_account_name: {{azure_storage_account_name}}
@@ -84,6 +100,7 @@ resources:
     product_slug: platform-automation
     product_version: 1\.(.*) # pin to major version 1
     sort_by: semver
+
 
 - name: platform-automation-tasks-azure
   type: azure-blobstore
@@ -133,6 +150,40 @@ jobs:
     - put: healthwatch-stemcell
       params:
         file: healthwatch-stemcell/bosh-stemcell-97.43-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: fetch-pasw
+  plan: 
+  - aggregate:
+    - do:     
+      - get: daily
+        trigger: true   
+      - get: config 
+      - get: vars
+      - get: platform-automation-tasks-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip
+      - get: platform-automation-image-azure
+        passed: [fetch-platform-automation]
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+    
+  - task: download-pasw-product-and-stemcell
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/download-product.yml
+    params:
+      CONFIG_FILE: download-product-configs/pasw.yml
+      VARS_FILES: vars/vars.yml
+    output_mapping: {downloaded-stemcell: pasw-stemcell}
+  - task: build-injected-pasw
+    file: config/tasks/build-injected-pasw/task.yml
+  - aggregate:
+    - put: pasw-product
+      params:
+        file: pasw-injected/pas-windows-2.4.1-build.1.pivotal
+    - put: pasw-stemcell
+      params:
+        file: pasw-stemcell/light-bosh-stemcell-1803.5-azure-hyperv-windows1803-go_agent.tgz
 
 
 - name: fetch-opsman
