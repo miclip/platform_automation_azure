@@ -212,6 +212,8 @@ product-properties:
     value: false
   .properties.syslog_drop_debug:
     value: true
+  .properties.haproxy_forward_tls.enable.backend_ca:
+    value: 
   .properties.syslog_metrics_to_syslog_enabled:
     value: true
   .properties.syslog_tls:
