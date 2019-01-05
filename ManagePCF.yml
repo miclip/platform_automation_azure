@@ -403,6 +403,7 @@ jobs:
     params:
       CONFIG_FILE: ((foundation))/config/healthwatch.yml
       ENV_FILE: ((foundation))/env/env.yml
+      VARS_FILES: vars/((foundation))/vars/healthwatch-vars.yml
 
 - name: apply-product-changes
   serial: true
@@ -428,43 +429,4 @@ jobs:
     params:
       ENV_FILE: ((foundation))/env/env.yml
 
-- name: staged-pas-config
-  plan:
-  - aggregate:
-    - get: platform-automation-image-azure
-    - file: config/tasks/tar-platform-automation-image/task.yml
-      task: unpack-tarball  
-    - get: platform-automation-tasks-azure
-    - file: config/tasks/unzip-platform-automation-tasks/task.yml
-      task: unpack-zip
-    - get: config
-    - get: vars
-  - task: staged-config
-    image: platform-automation-image
-    file: platform-automation-tasks/tasks/staged-config.yml
-    input_mapping:
-      env: vars
-    params:
-      PRODUCT_NAME: cf
-      ENV_FILE: ((foundation))/env/env.yml
 
-- name: staged-healthwatch-config
-  plan:
-  - aggregate:
-    - do: 
-      - get: config
-      - get: platform-automation-image-azure
-      - file: config/tasks/tar-platform-automation-image/task.yml
-        task: unpack-tarball  
-      - get: platform-automation-tasks-azure
-      - file: config/tasks/unzip-platform-automation-tasks/task.yml
-        task: unpack-zip      
-      - get: vars
-  - task: staged-config
-    image: platform-automation-image
-    file: platform-automation-tasks/tasks/staged-config.yml
-    input_mapping:
-      env: vars
-    params:
-      PRODUCT_NAME: p-healthwatch
-      ENV_FILE: ((foundation))/env/env.yml
