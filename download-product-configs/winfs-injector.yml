@@ -1,0 +1,8 @@
+
+---
+pivnet-api-token: ((pivnet_token))
+pivnet-file-glob: "winfs*zip"
+pivnet-product-slug: pas-windows
+product-version: 2.4.1
+download-stemcell: false
+stemcell-iaas: "azure"

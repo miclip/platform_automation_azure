@@ -7,9 +7,9 @@ image_resource:
     repository: pcfnorm/rootfs
 
 inputs:
-- name: pivnet-pasw
-- name: pivnet-winfs-injector
+- name: downloaded-product
+- name: winfs-injector
 run:
-  path: pcf-pipelines/deploy-pasw/tasks/build-injected-pasw/task.sh
+  path: config/tasks/build-injected-pasw/task.sh
 outputs:
 - name: pasw-injected

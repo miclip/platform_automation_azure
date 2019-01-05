@@ -166,8 +166,7 @@ jobs:
       - get: platform-automation-image-azure
         passed: [fetch-platform-automation]
       - file: config/tasks/tar-platform-automation-image/task.yml
-        task: unpack-tarball
-    
+        task: unpack-tarball    
   - task: download-pasw-product-and-stemcell
     image: platform-automation-image
     file: platform-automation-tasks/tasks/download-product.yml
@@ -175,6 +174,13 @@ jobs:
       CONFIG_FILE: download-product-configs/pasw.yml
       VARS_FILES: vars/vars.yml
     output_mapping: {downloaded-stemcell: pasw-stemcell}
+  - task: download-pasw-winfs-injector
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/download-product.yml
+    params:
+      CONFIG_FILE: download-product-configs/winfs-injector.yml
+      VARS_FILES: vars/vars.yml
+    output_mapping: {downloaded-product: winfs-injector}
   - task: build-injected-pasw
     file: config/tasks/build-injected-pasw/task.yml
   - aggregate:
