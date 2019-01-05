@@ -132,8 +132,6 @@ product-properties:
     value: none
   .properties.haproxy_forward_tls:
     value: enable
-  .properties.haproxy_forward_tls.enable.backend_ca:
-    value:
   .properties.haproxy_hsts_support:
     value: disable
   .properties.haproxy_max_buffer_size:
