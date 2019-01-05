@@ -105,6 +105,22 @@ resources:
     container: {{azure_pcfauto_storage_container}}
     versioned_file: {{platform_automation_image_tarball}}
 
+- name: pasw-stemcell
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: bosh-stemcell-170.15-azure-hyperv-ubuntu-xenial-go_agent.tgz
+
+- name: pasw-product
+  type: azure-blobstore
+  source:
+    storage_account_name: {{azure_storage_account_name}}
+    storage_account_key: {{azure_storage_account_key}}
+    container: {{azure_pivnet_products_storage_container}}
+    versioned_file: pas-windows-2.4.1-build.1.pivotal
+
 jobs:
 - name: install-opsman
   serial: true
@@ -286,6 +302,39 @@ jobs:
     params:
       ENV_FILE: ((foundation))/env/env.yml
 
+- name: upload-and-stage-pasw
+  serial: true
+  plan:
+  - aggregate:
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-image-azure
+        passed: [upgrade-opsman]
+        trigger: true
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+      - get: platform-automation-tasks-azure    
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip  
+      - get: pasw-product 
+  - task: upload-product
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-product.yml
+    input_mapping:
+      product: pasw-product
+      env: vars
+    params:
+      ENV_FILE: ((foundation))/env/env.yml
+  - task: stage-product
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/stage-product.yml
+    input_mapping:
+      product: pasw-product
+      env: vars
+    params:
+      ENV_FILE: ((foundation))/env/env.yml
+
 - name: configure-pas
   serial: true
   plan:
@@ -314,6 +363,33 @@ jobs:
       VARS_FILES: vars/((foundation))/vars/cf-vars.yml
       ENV_FILE: ((foundation))/env/env.yml
 
+- name: configure-pasw
+  serial: true
+  plan:
+  - aggregate:
+    - do: 
+      - get: config
+      - get: vars
+      - get: platform-automation-image-azure
+        passed:
+        - upload-and-stage-pasw
+        trigger: true
+      - file: config/tasks/tar-platform-automation-image/task.yml
+        task: unpack-tarball
+      - get: platform-automation-tasks-azure
+      - file: config/tasks/unzip-platform-automation-tasks/task.yml
+        task: unpack-zip    
+  - task: configure-pasw
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/configure-product.yml
+    input_mapping:
+      config: config
+      env: vars
+      vars: vars
+    params:
+      CONFIG_FILE: ((foundation))/config/pasw.yml
+      ENV_FILE: ((foundation))/env/env.yml
+
 - name: upload-stemcell
   serial: true
   plan:
@@ -333,6 +409,8 @@ jobs:
         trigger: true
       - get: healthwatch-stemcell
         trigger: true    
+      - get: pasw-stemcell
+        trigger: true    
       - get: vars
   - task: upload-pas-stemcell
     image: platform-automation-image
@@ -340,6 +418,14 @@ jobs:
     input_mapping:
       env: vars
       stemcell: pas-stemcell
+    params:
+      ENV_FILE: ((foundation))/env/env.yml
+  - task: upload-pasw-stemcell
+    image: platform-automation-image
+    file: platform-automation-tasks/tasks/upload-stemcell.yml
+    input_mapping:
+      env: vars
+      stemcell: pasw-stemcell
     params:
       ENV_FILE: ((foundation))/env/env.yml
   - task: upload-healthwatch-stemcell
@@ -415,6 +501,7 @@ jobs:
         passed:
         - configure-healthwatch
         - configure-pas
+        - configure-pasw
         trigger: true
       - file: config/tasks/tar-platform-automation-image/task.yml
         task: unpack-tarball  

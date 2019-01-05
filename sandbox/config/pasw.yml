@@ -1,0 +1,33 @@
+product-name: pas-windows
+product-properties:
+  .properties.bosh_ssh_enabled:
+    value: false
+  .properties.kms:
+    value: disabled
+  .properties.kms.enable.port:
+    value: 1688
+  .properties.rdp_enabled:
+    value: false
+  .properties.system_logging:
+    value: disabled
+  .properties.system_logging.enable.syslog_protocol:
+    value: udp
+  .properties.windows_admin_password:
+    value: use_default
+  .windows_diego_cell.executor_disk_capacity:
+    value: 
+  .windows_diego_cell.executor_memory_capacity:
+    value: 
+  .windows_diego_cell.placement_tags:
+    value:  
+network-properties:
+  network:
+    name: ert
+  other_availability_zones:
+  - name: "null"
+  singleton_availability_zone:
+    name: "null"
+resource-config:
+  windows_diego_cell:
+    instances: automatic
+    
